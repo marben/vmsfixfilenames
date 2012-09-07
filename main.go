@@ -31,6 +31,9 @@ func vmsFilename(filename string) bool {
 	return false
 }
 
+// converts vmsFilename to normal filename (removes tailing ;<num>)
+// if normal filename specified, process it without changing extension
+// if toupper/tolowe specified, converts the filename accordingly in all cases
 func vmsFixFilename(vmsFilename string) (string, error) {
 	var output string
 	matches := vmsRegexp.FindStringSubmatch(vmsFilename)
@@ -89,6 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
+    newFiles := make(map[string]string)
 	for _, file := range files {
 		if vmsFilename(file.Name()) || force {
 			newFilename, err := vmsFixFilename(file.Name())
@@ -98,8 +102,15 @@ func main() {
 			}
 
 			fmt.Printf("%s -> %s\n", file.Name(), newFilename)
+            newFiles[file.Name()] = newFilename
 		}
 	}
+
+    if len(newFiles) == 0 {
+        fmt.Println("No files to process. Exitting..")
+        os.Exit(0)
+    }
+
 
 	fmt.Println("Do you want to continue? [Y/n]")
 	var reply string
@@ -109,18 +120,11 @@ func main() {
 		fmt.Println("Quitting.")
 		os.Exit(0)
 	}
-	for _, file := range files {
-		if vmsFilename(file.Name()) || force {
-			newFilename, err := vmsFixFilename(file.Name())
-			if err != nil {
-				panic("panic!!")
-				os.Exit(1)
-			}
+	for file, newFile := range newFiles {
 
-			err_rename := os.Rename(filepath.Join(dirname, file.Name()), filepath.Join(dirname, newFilename))
-			if err_rename != nil {
-				fmt.Fprint(os.Stderr, err_rename)
-			}
-		}
+        err_rename := os.Rename(filepath.Join(dirname, file), filepath.Join(dirname, newFile))
+        if err_rename != nil {
+            fmt.Fprint(os.Stderr, err_rename)
+        }
 	}
 }
